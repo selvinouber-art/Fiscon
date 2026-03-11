@@ -24,7 +24,11 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [cancelPending, setCancelPending] = useState([]);
   const [defesas, setDefesas] = useState([]);
-  const [screen, setScreen] = useState("login");
+  const [screen, setScreen] = useState(() => {
+    try {
+      return localStorage.getItem("fiscon_user") ? "main" : "login";
+    } catch { return "login"; }
+  });
   const [tab, setTab] = useState("home");
   const [user, setUser] = useState(() => {
     try {
