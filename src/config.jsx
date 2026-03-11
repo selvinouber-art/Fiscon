@@ -921,6 +921,30 @@ const Icon = ({ name, size = 20, color = "currentColor" }) => {
         <line x1="5" y1="12" x2="19" y2="12" />
       </svg>
     ),
+    chart: (
+      <svg
+        width={size}
+        height={size}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M18 20V10M12 20V4M6 20v-6" />
+      </svg>
+    ),
+    shield: (
+      <svg
+        width={size}
+        height={size}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
   };
   return icons[name] || null;
 };
