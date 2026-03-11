@@ -564,12 +564,64 @@ function FormScreen({ type, prefill, onPreview, onBack, user }) {
       return next;
     });
   };
+  // Carimbo automático: adiciona data/hora/GPS/fiscal na foto
+  const addWatermark = (file, gpsCoord, fiscalName) =>
+    new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 1200;
+        const scale = Math.min(1, maxW / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        // Faixa escura na parte inferior
+        const barH = 52;
+        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        ctx.fillRect(0, c.height - barH, c.width, barH);
+        // Texto do carimbo
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 13px Arial, sans-serif";
+        const agora = new Date();
+        const dataHora = agora.toLocaleString("pt-BR");
+        ctx.fillText(`FISCON · ${dataHora}`, 10, c.height - barH + 18);
+        ctx.font = "12px Arial, sans-serif";
+        ctx.fillText(`Fiscal: ${fiscalName || "—"}`, 10, c.height - barH + 36);
+        if (gpsCoord) {
+          ctx.fillText(`GPS: ${gpsCoord}`, c.width / 2, c.height - barH + 36);
+        }
+        // Texto "FISCALIZAÇÃO" semi-transparente no centro (marca d'água)
+        ctx.save();
+        ctx.globalAlpha = 0.08;
+        ctx.font = "bold 80px Arial, sans-serif";
+        ctx.translate(c.width / 2, c.height / 2);
+        ctx.rotate(-0.3);
+        ctx.textAlign = "center";
+        ctx.fillText("FISCALIZAÇÃO", 0, 0);
+        ctx.restore();
+        c.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(url);
+            resolve(blob || file);
+          },
+          "image/jpeg",
+          0.85
+        );
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+
   const handlePhotoSelect = async (i, file) => {
     if (!file) return;
-    const preview = URL.createObjectURL(file);
+    // Aplica carimbo automático com data/hora/GPS/fiscal
+    const stamped = await addWatermark(file, gps, user?.name);
+    const preview = URL.createObjectURL(stamped);
     setPhotos((prev) => {
       const n = [...prev];
-      n[i] = { file, preview, url: null };
+      n[i] = { file: stamped, preview, url: null };
       return n;
     });
   };
