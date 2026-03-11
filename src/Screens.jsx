@@ -11122,5 +11122,375 @@ function AuditoriaScreen({ logs, records, user }) {
   );
 }
 
+// ═══════════════════════════════════════════════════
+//  FISCON — SPRINT 3: RelatoriosScreen + BackupPanel
+//
+//  Cole no Screens.jsx ANTES da última linha (export)
+// ═══════════════════════════════════════════════════
+
+function RelatoriosScreen({ records = [], usuarios = [], reclamacoes = [] }) {
+  const [tab, setTab] = useState("fiscal");
+  const [mes, setMes] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupResult, setBackupResult] = useState(null);
+
+  // Filtrar por mês selecionado
+  const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [d, m, a] = dateStr.split("/");
+    return { dia: +d, mes: +m, ano: +a };
+  };
+
+  const [anoSel, mesSel] = mes.split("-").map(Number);
+  const recordsDoMes = records.filter((r) => {
+    const p = parseDate(r.date);
+    return p && p.mes === mesSel && p.ano === anoSel;
+  });
+
+  // Dados por fiscal
+  const fiscais = [...new Set(records.map((r) => r.fiscal).filter(Boolean))];
+  const dadosPorFiscal = fiscais.map((f) => {
+    const recs = recordsDoMes.filter((r) => r.fiscal === f);
+    return {
+      nome: f,
+      notifs: recs.filter((r) => r.type === "notif").length,
+      autos: recs.filter((r) => r.type === "auto").length,
+      total: recs.length,
+      multas: recs
+        .filter((r) => r.multa)
+        .reduce((s, r) => s + (parseFloat(String(r.multa).replace(/\./g, "").replace(",", ".")) || 0), 0),
+    };
+  }).sort((a, b) => b.total - a.total);
+
+  // Dados por bairro
+  const bairros = [...new Set(records.map((r) => r.bairro).filter(Boolean))];
+  const dadosPorBairro = bairros.map((b) => {
+    const recs = recordsDoMes.filter((r) => r.bairro === b);
+    return {
+      nome: b,
+      notifs: recs.filter((r) => r.type === "notif").length,
+      autos: recs.filter((r) => r.type === "auto").length,
+      total: recs.length,
+    };
+  }).sort((a, b) => b.total - a.total);
+
+  // Evolução mensal (últimos 6 meses)
+  const evolucao = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(anoSel, mesSel - 1 - i, 1);
+    const m = d.getMonth() + 1;
+    const a = d.getFullYear();
+    const mLabel = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+    const recs = records.filter((r) => {
+      const p = parseDate(r.date);
+      return p && p.mes === m && p.ano === a;
+    });
+    evolucao.push({
+      mes: `${mLabel}/${String(a).slice(2)}`,
+      notifs: recs.filter((r) => r.type === "notif").length,
+      autos: recs.filter((r) => r.type === "auto").length,
+      total: recs.length,
+    });
+  }
+  const maxEvolucao = Math.max(...evolucao.map((e) => e.total), 1);
+
+  // Multas
+  const totalMultas = recordsDoMes
+    .filter((r) => r.multa)
+    .reduce((s, r) => s + (parseFloat(String(r.multa).replace(/\./g, "").replace(",", ".")) || 0), 0);
+  const qtdMultas = recordsDoMes.filter((r) => r.multa).length;
+
+  // Exportar para CSV
+  const exportarCSV = (dados, colunas, nomeArquivo) => {
+    const header = colunas.map((c) => c.label).join(";");
+    const rows = dados.map((d) => colunas.map((c) => d[c.key]).join(";")).join("\n");
+    const csv = "\uFEFF" + header + "\n" + rows; // BOM para Excel
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${nomeArquivo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Backup
+  const fazerBackup = async () => {
+    setBackupLoading(true);
+    setBackupResult(null);
+    try {
+      const result = await supa.rpc("fazer_backup", {});
+      setBackupResult(result?.success ? "Backup realizado com sucesso!" : "Erro no backup");
+    } catch (e) {
+      setBackupResult("Erro: " + e.message);
+    }
+    setBackupLoading(false);
+    setTimeout(() => setBackupResult(null), 5000);
+  };
+
+  const S = {
+    card: { background: "#fff", border: `2px solid ${T.border}`, borderRadius: 14, padding: 18, marginBottom: 12 },
+    sectionTitle: { fontFamily: T.font, fontSize: 14, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", color: T.accent, marginBottom: 14, paddingBottom: 8, borderBottom: `2px solid ${T.border}` },
+    tab: (active) => ({
+      padding: "10px 16px", borderRadius: 10, border: `2px solid ${active ? T.accent : T.border}`,
+      background: active ? "#EBF5FF" : "#fff", color: active ? T.accent : T.muted,
+      fontSize: 12, fontWeight: 700, cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase",
+      fontFamily: T.font, whiteSpace: "nowrap",
+    }),
+    bar: (pct, color) => ({
+      height: 22, borderRadius: 6, background: `${color}20`, position: "relative", overflow: "hidden",
+    }),
+    barFill: (pct, color) => ({
+      position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.max(pct, 2)}%`,
+      background: color, borderRadius: 6, transition: "width 0.5s ease",
+    }),
+  };
+
+  const meses = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    meses.push({
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+    });
+  }
+
+  return (
+    <div className="admin-screen">
+      <div style={{ fontFamily: T.font, fontSize: 22, fontWeight: 800, letterSpacing: 1, marginBottom: 6 }}>
+        Relatórios
+      </div>
+      <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>
+        Análise de fiscalização por período, fiscal e bairro.
+      </div>
+
+      {/* Seletor de mês */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <select
+          value={mes}
+          onChange={(e) => setMes(e.target.value)}
+          style={{
+            padding: "10px 14px", borderRadius: 10, border: `2px solid ${T.border}`,
+            fontSize: 14, fontFamily: T.body, color: T.text, background: "#fff", cursor: "pointer",
+          }}
+        >
+          {meses.map((m) => (
+            <option key={m.value} value={m.value}>{m.label}</option>
+          ))}
+        </select>
+        <span style={{ fontSize: 13, color: T.muted }}>
+          {recordsDoMes.length} registro(s) no período
+        </span>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", paddingBottom: 4 }}>
+        <button style={S.tab(tab === "fiscal")} onClick={() => setTab("fiscal")}>👷 Por Fiscal</button>
+        <button style={S.tab(tab === "evolucao")} onClick={() => setTab("evolucao")}>📈 Evolução</button>
+        <button style={S.tab(tab === "multas")} onClick={() => setTab("multas")}>💰 Multas</button>
+        <button style={S.tab(tab === "backup")} onClick={() => setTab("backup")}>💾 Backup</button>
+      </div>
+
+      {/* ═══ POR FISCAL ═══ */}
+      {tab === "fiscal" && (
+        <div>
+          <div style={S.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={S.sectionTitle}>Produção por Fiscal</div>
+              <button
+                onClick={() => exportarCSV(dadosPorFiscal, [
+                  { key: "nome", label: "Fiscal" },
+                  { key: "notifs", label: "Notificações" },
+                  { key: "autos", label: "Autos" },
+                  { key: "total", label: "Total" },
+                  { key: "multas", label: "Multas (R$)" },
+                ], `relatorio-fiscais-${mes}`)}
+                style={{ background: T.success, color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+              >
+                📥 Exportar CSV
+              </button>
+            </div>
+
+            {dadosPorFiscal.length === 0 ? (
+              <div style={{ padding: 30, textAlign: "center", color: T.muted, fontSize: 13 }}>
+                Nenhum registro neste período.
+              </div>
+            ) : (
+              dadosPorFiscal.map((f, i) => (
+                <div key={f.nome} style={{ padding: "14px 0", borderBottom: i < dadosPorFiscal.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{f.nome}</span>
+                    <span style={{ fontFamily: T.font, fontSize: 18, fontWeight: 800, color: T.accent }}>{f.total}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
+                    <span style={{ color: T.gold }}>📋 {f.notifs} notif.</span>
+                    <span style={{ color: T.danger }}>📄 {f.autos} autos</span>
+                    {f.multas > 0 && (
+                      <span style={{ color: T.danger, fontWeight: 700 }}>
+                        💰 R$ {f.multas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ ...S.bar(0, T.accent), marginTop: 8 }}>
+                    <div style={S.barFill((f.total / (dadosPorFiscal[0]?.total || 1)) * 100, T.accent)} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ EVOLUÇÃO MENSAL ═══ */}
+      {tab === "evolucao" && (
+        <div style={S.card}>
+          <div style={S.sectionTitle}>Evolução — Últimos 6 Meses</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {evolucao.map((e) => (
+              <div key={e.mes}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: T.text, textTransform: "capitalize" }}>{e.mes}</span>
+                  <span style={{ fontSize: 12, color: T.muted }}>{e.total} total</span>
+                </div>
+                <div style={{ display: "flex", gap: 4, height: 28 }}>
+                  <div style={{
+                    width: `${Math.max((e.notifs / maxEvolucao) * 100, 1)}%`,
+                    background: T.gold, borderRadius: "6px 0 0 6px", minWidth: e.notifs > 0 ? 20 : 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 10, fontWeight: 800, color: "#fff", transition: "width 0.5s",
+                  }}>
+                    {e.notifs > 0 ? e.notifs : ""}
+                  </div>
+                  <div style={{
+                    width: `${Math.max((e.autos / maxEvolucao) * 100, 1)}%`,
+                    background: T.danger, borderRadius: "0 6px 6px 0", minWidth: e.autos > 0 ? 20 : 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 10, fontWeight: 800, color: "#fff", transition: "width 0.5s",
+                  }}>
+                    {e.autos > 0 ? e.autos : ""}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 16, marginTop: 16, fontSize: 11, justifyContent: "center" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: T.gold }} /> Notificações
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: T.danger }} /> Autos
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MULTAS ═══ */}
+      {tab === "multas" && (
+        <div>
+          {/* Resumo */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div style={{ ...S.card, textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Total em Multas</div>
+              <div style={{ fontFamily: T.font, fontSize: 28, fontWeight: 800, color: T.danger }}>
+                R$ {totalMultas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+            <div style={{ ...S.card, textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Autos com Multa</div>
+              <div style={{ fontFamily: T.font, fontSize: 28, fontWeight: 800, color: T.accent }}>{qtdMultas}</div>
+            </div>
+          </div>
+
+          {/* Lista de multas */}
+          <div style={S.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={S.sectionTitle}>Detalhamento de Multas</div>
+              <button
+                onClick={() => exportarCSV(
+                  recordsDoMes.filter((r) => r.multa).map((r) => ({
+                    num: r.num, owner: r.owner, bairro: r.bairro, date: r.date,
+                    fiscal: r.fiscal, multa: r.multa, status: r.status,
+                  })),
+                  [
+                    { key: "num", label: "Número" },
+                    { key: "owner", label: "Infrator" },
+                    { key: "bairro", label: "Bairro" },
+                    { key: "date", label: "Data" },
+                    { key: "fiscal", label: "Fiscal" },
+                    { key: "multa", label: "Multa (R$)" },
+                    { key: "status", label: "Status" },
+                  ], `relatorio-multas-${mes}`
+                )}
+                style={{ background: T.success, color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+              >
+                📥 Exportar CSV
+              </button>
+            </div>
+            {recordsDoMes.filter((r) => r.multa).length === 0 ? (
+              <div style={{ padding: 30, textAlign: "center", color: T.muted, fontSize: 13 }}>Nenhuma multa neste período.</div>
+            ) : (
+              recordsDoMes.filter((r) => r.multa).map((r, i) => (
+                <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${T.border}` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{r.num}</div>
+                    <div style={{ fontSize: 12, color: T.muted }}>{r.owner} · {r.bairro}</div>
+                    <div style={{ fontSize: 11, color: T.muted }}>{r.date} · {r.fiscal}</div>
+                  </div>
+                  <div style={{ fontFamily: T.font, fontSize: 16, fontWeight: 800, color: T.danger, whiteSpace: "nowrap" }}>
+                    R$ {r.multa}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ BACKUP ═══ */}
+      {tab === "backup" && (
+        <div style={S.card}>
+          <div style={S.sectionTitle}>Backup do Sistema</div>
+          <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, marginBottom: 20 }}>
+            Faz um snapshot completo de todos os dados do sistema (registros, usuários, reclamações, defesas, configurações).
+            Os backups ficam salvos no banco de dados.
+          </div>
+          <button
+            onClick={fazerBackup}
+            disabled={backupLoading}
+            style={{
+              width: "100%", padding: 16, borderRadius: 12, border: "none",
+              background: backupLoading ? T.muted : T.accent, color: "#fff",
+              fontFamily: T.font, fontSize: 16, fontWeight: 800, letterSpacing: 1.5,
+              textTransform: "uppercase", cursor: backupLoading ? "wait" : "pointer",
+            }}
+          >
+            {backupLoading ? "Fazendo backup..." : "💾 Fazer Backup Agora"}
+          </button>
+          {backupResult && (
+            <div style={{
+              marginTop: 12, padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+              background: backupResult.includes("sucesso") ? "#D1FAE5" : "#FEE2E2",
+              color: backupResult.includes("sucesso") ? T.success : T.danger,
+              border: `1px solid ${backupResult.includes("sucesso") ? "#6EE7B7" : "#FCA5A5"}`,
+            }}>
+              {backupResult}
+            </div>
+          )}
+          <div style={{ marginTop: 20, padding: 14, background: "#F8FAFC", borderRadius: 10, border: `1px solid ${T.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 8 }}>Dica: Backup automático</div>
+            <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6 }}>
+              No plano Pro do Supabase, é possível configurar backup automático diário.
+              No plano gratuito, clique no botão acima regularmente (recomendado: toda semana).
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, ConfirmDeleteModal, UserFormModal, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacaoModal, NovaReclamacaoScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, RelatoriosScreen };
