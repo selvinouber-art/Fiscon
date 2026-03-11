@@ -1052,6 +1052,15 @@ const supa = {
       headers: this.headers,
     });
   },
+    async rpc(fnName, params = {}) {
+    const r = await fetch(`${SUPA_URL}/rest/v1/rpc/${fnName}`, {
+      method: "POST",
+      headers: this.headers,
+      body: JSON.stringify(params),
+    });
+    if (!r.ok) { console.error("rpc error:", await r.text()); return null; }
+    return r.json();
+  },
   async uploadFoto(file, pasta) {
     try {
       const blob = await compressImage(file, 900, 0.75);
