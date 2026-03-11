@@ -5,7 +5,7 @@ import React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { T, css, Icon, maskMatricula, calcPrazo, SUPA_URL, SUPA_KEY, PORTAL_URL, supa, ADMIN_MASTER, BRASAO_DATA } from "./config.jsx";
 import { DocPreview, imprimirTermica, gerarPDFA4 } from "./Impressao";
-import { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, RelatorioScreen, NovaReclamacaoScreen } from "./Screens";
+import { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, RelatoriosScreen, NovaReclamacaoScreen } from "./Screens";
 
 // --- App ----------------------------------------------------------------------
 export default function App() {
