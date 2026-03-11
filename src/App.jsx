@@ -270,6 +270,7 @@ export default function App() {
     // Admin master (credencial configurável — apenas emergência)
     if (login.toLowerCase() === "admin" && senha === ADMIN_MASTER.senha) {
       setUser({ ...ADMIN_MASTER });
+      localStorage.setItem("fiscon_user", JSON.stringify(found));
       setScreen("main");
       setTab("home");
       addLog(
@@ -307,6 +308,7 @@ export default function App() {
           ativo: result.ativo,
         };
         setUser(found);
+        localStorage.setItem("fiscon_user", JSON.stringify(found));
         setScreen("main");
         const tab_ =
           {
@@ -1213,6 +1215,7 @@ export default function App() {
             </button>
             <button
               onClick={() => {
+                localStorage.removeItem("fiscon_user");
                 setUser(null);
                 setScreen("login");
                 setLoginData({ login: "", password: "" });
