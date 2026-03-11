@@ -11123,4 +11123,4 @@ function AuditoriaScreen({ logs, records, user }) {
 }
 
 
-export { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, ConfirmDeleteModal, UserFormModal, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacaoModal, NovaReclamacaoScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen };
+export { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, ConfirmDeleteModal, UserFormModal, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacaoModal, NovaReclamacaoScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, RelatoriosScreen };
