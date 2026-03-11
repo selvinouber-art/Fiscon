@@ -5,7 +5,7 @@ import React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { T, css, Icon, maskMatricula, calcPrazo, SUPA_URL, SUPA_KEY, PORTAL_URL, supa, ADMIN_MASTER, BRASAO_DATA } from "./config.jsx";
 import { DocPreview, imprimirTermica, gerarPDFA4 } from "./Impressao";
-import { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, NovaReclamacaoScreen } from "./Screens";
+import { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, RelatorioScreen, NovaReclamacaoScreen } from "./Screens";
 
 // --- App ----------------------------------------------------------------------
 export default function App() {
@@ -670,6 +670,7 @@ export default function App() {
           { id: "defesas", label: "Defesas", icon: "file" },
           { id: "config", label: "Config", icon: "save" },
           { id: "auditoria", label: "Auditoria", icon: "history" },
+          { id: "relatorios", label: "Relatórios", icon: "chart" },          
           { id: "log", label: "Log", icon: "history" },
         ]
       : user?.role === "supervisor"
@@ -1423,6 +1424,9 @@ export default function App() {
           {screen === "main" && tab === "auditoria" && (
             <AuditoriaScreen logs={logs} records={records} user={user} />
           )}
+          {screen === "main" && tab === "relatorios" && (
+            <RelatoriosScreen records={records} usuarios={usuarios} reclamacoes={reclamacoes} />
+          )}          
           {screen === "main" && tab === "defesas" && (
             <DefesasScreen
               defesas={defesas}
