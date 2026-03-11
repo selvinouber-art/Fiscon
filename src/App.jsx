@@ -26,7 +26,12 @@ export default function App() {
   const [defesas, setDefesas] = useState([]);
   const [screen, setScreen] = useState("login");
   const [tab, setTab] = useState("home");
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("fiscon_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [preview, setPreview] = useState(null);
   const [loginData, setLoginData] = useState({ login: "", password: "" });
   const [loginError, setLoginError] = useState("");
