@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { T, css, Icon, maskMatricula, calcPrazo, SUPA_URL, SUPA_KEY, PORTAL_URL, supa, ADMIN_MASTER, BRASAO_DATA } from "./config.jsx";
 import { DocPreview, imprimirTermica, gerarPDFA4 } from "./Impressao";
 import { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, RelatoriosScreen, NovaReclamacaoScreen } from "./Screens";
+import { saveSession, loadSession, touchSession, clearSession, checkSessionExpired } from "./auth.js";
 
 // --- App ----------------------------------------------------------------------
 export default function App() {
@@ -25,17 +26,11 @@ export default function App() {
   const [cancelPending, setCancelPending] = useState([]);
   const [defesas, setDefesas] = useState([]);
   const [screen, setScreen] = useState(() => {
-    try {
-      return localStorage.getItem("fiscon_user") ? "main" : "login";
-    } catch { return "login"; }
+    const saved = loadSession();
+    return saved ? "main" : "login";
   });
   const [tab, setTab] = useState("home");
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem("fiscon_user");
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  });
+  const [user, setUser] = useState(() => loadSession());
   const [preview, setPreview] = useState(null);
   const [loginData, setLoginData] = useState({ login: "", password: "" });
   const [loginError, setLoginError] = useState("");
@@ -120,6 +115,32 @@ export default function App() {
     const interval = setInterval(ping, 30000);
     return () => clearInterval(interval);
   }, [user?.id, screen]);
+
+  // Verificar expiração de sessão a cada 60s + rastrear atividade
+  useEffect(() => {
+    if (!user || screen !== "main") return;
+    // Rastrear atividade do mouse/teclado
+    const handleActivity = () => touchSession();
+    window.addEventListener("mousemove", handleActivity, { passive: true });
+    window.addEventListener("keydown", handleActivity, { passive: true });
+    window.addEventListener("click", handleActivity, { passive: true });
+    // Verificar expiração a cada 60 segundos
+    const checkExpiry = setInterval(() => {
+      if (checkSessionExpired()) {
+        clearSession();
+        setUser(null);
+        setScreen("login");
+        setLoginData({ login: "", password: "" });
+        alert("Sessão expirada por inatividade. Faça login novamente.");
+      }
+    }, 60000);
+    return () => {
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("click", handleActivity);
+      clearInterval(checkExpiry);
+    };
+  }, [user, screen]);
   // -- Mapeadores: banco ? app ------------------------------------------------
   const mapRecord = (r) => ({
     id: r.id,
@@ -270,7 +291,7 @@ export default function App() {
     // Admin master (credencial configurável — apenas emergência)
     if (login.toLowerCase() === "admin" && senha === ADMIN_MASTER.senha) {
       setUser({ ...ADMIN_MASTER });
-      localStorage.setItem("fiscon_user", JSON.stringify(found));
+      saveSession({ ...ADMIN_MASTER });
       setScreen("main");
       setTab("home");
       addLog(
@@ -308,7 +329,7 @@ export default function App() {
           ativo: result.ativo,
         };
         setUser(found);
-        localStorage.setItem("fiscon_user", JSON.stringify(found));
+        saveSession(found);
         setScreen("main");
         const tab_ =
           {
@@ -697,7 +718,7 @@ export default function App() {
           { id: "home", label: "Início", icon: "home" },
           { id: "form", label: "Novo", icon: "file" },
           { id: "reclamacoes", label: "Reclamações", icon: "bell" },
-          { id: "prazos", label: "Prazos", icon: "bell" },
+          { id: "prazos", label: "Vencim.", icon: "history" },
           { id: "registros", label: "Registros", icon: "history" },
         ];
 
@@ -1165,7 +1186,7 @@ export default function App() {
               {tab === "administracao" && "Painel Administrativo"}
               {tab === "admin" && "Gestão de Usuários"}
               {tab === "defesas" && "Defesas"}
-              {tab === "prazos" && "Controle de Prazos"}
+              {tab === "prazos" && "Controle de Vencimentos"}
               {tab === "log" && "Log do Sistema"}
               {tab === "history" && "Histórico"}
               {screen === "form-notif" && "Nova Notificação"}
@@ -1215,7 +1236,7 @@ export default function App() {
             </button>
             <button
               onClick={() => {
-                localStorage.removeItem("fiscon_user");
+                clearSession();
                 setUser(null);
                 setScreen("login");
                 setLoginData({ login: "", password: "" });
@@ -1426,7 +1447,13 @@ export default function App() {
             <PrazosScreen
               records={records}
               user={user}
-              onNav={(tab) => setTab(tab)}
+              onNav={(data) => {
+                if (typeof data === "string") { setTab(data); }
+                else if (data?.tab) {
+                  setTab(data.tab);
+                  if (data.openRecord) setRegistrosFiltro({ tipo: data.openRecord.type, status: "all" });
+                }
+              }}
             />
           )}
           {screen === "main" && tab === "log" && <LogScreen logs={logs} />}
