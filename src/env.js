@@ -11,27 +11,39 @@
 //    VITE_SUPA_KEY=eyJ...
 //    VITE_PORTAL_URL=https://portal.dominio.com
 //    VITE_ADMIN_PASS=SenhaForte123!
+//
+//  Em DESENVOLVIMENTO (CodeSandbox), use window globals
+//  no index.html antes do bundle.
 // ═══════════════════════════════════════════════════
 
-// Prioridade: Variável de ambiente Vite > window global > fallback
+// Prioridade: Variável de ambiente Vite > window global > string vazia
 export const ENV = {
   SUPA_URL:
-    import.meta.env?.VITE_SUPA_URL ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPA_URL) ||
     window.__FISCON_SUPA_URL__ ||
-    "https://wkvgqwsjflcoxgugaais.supabase.co",
+    "",
 
   SUPA_KEY:
-    import.meta.env?.VITE_SUPA_KEY ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPA_KEY) ||
     window.__FISCON_SUPA_KEY__ ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indrdmdxd3NqZmxjb3hndWdhYWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODQ1MjIsImV4cCI6MjA4ODY2MDUyMn0.t-j-S-1JEfI_N-JR-CrNsJ6YoW24nnnHnolURWBy6c0",
+    "",
 
   PORTAL_URL:
-    import.meta.env?.VITE_PORTAL_URL ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PORTAL_URL) ||
     window.__FISCON_PORTAL_URL__ ||
-    "https://x8z7zd.csb.app",
+    "",
 
   ADMIN_PASS:
-    import.meta.env?.VITE_ADMIN_PASS ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ADMIN_PASS) ||
     window.__FISCON_ADMIN_PASS__ ||
-    "FiscOn@2026!",
+    "",
 };
+
+// Aviso se variáveis não estão configuradas
+if (!ENV.SUPA_URL || !ENV.SUPA_KEY) {
+  console.warn(
+    "FISCON: Variáveis SUPA_URL e SUPA_KEY não configuradas. " +
+    "Configure via VITE_SUPA_URL/VITE_SUPA_KEY no Vercel, " +
+    "ou window.__FISCON_SUPA_URL__/window.__FISCON_SUPA_KEY__ no index.html."
+  );
+}
