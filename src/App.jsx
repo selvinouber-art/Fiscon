@@ -169,6 +169,7 @@ export default function App() {
     testemunha1: r.testemunha1 || "",
     testemunha2: r.testemunha2 || "",
     obsRecusa: r.obs_recusa || "",
+    gerencia: r.gerencia || "obras",
   });
 
   const mapReclamacao = (r) => ({
@@ -550,6 +551,7 @@ export default function App() {
           p_endereco: updated.endereco || "",
           p_bairros: updated.bairros || [],
           p_ativo: updated.ativo !== false,
+          p_gerencia: updated.gerencia || "obras",
         }),
       });
     }
@@ -581,6 +583,7 @@ export default function App() {
                 p_endereco: u.endereco || "",
                 p_bairros: u.bairros || [],
                 p_ativo: u.ativo !== false,
+                p_gerencia: u.gerencia || "obras",
               }),
             });
           }
@@ -601,6 +604,7 @@ export default function App() {
                 p_endereco: u.endereco || "",
                 p_bairros: u.bairros || [],
                 p_ativo: u.ativo !== false,
+                p_gerencia: u.gerencia || "obras",
               }),
             });
           } else {
@@ -614,6 +618,7 @@ export default function App() {
               endereco: u.endereco || "",
               bairros: u.bairros || [],
               ativo: u.ativo !== false,
+              gerencia: u.gerencia || "obras",
             });
           }
         }
@@ -680,8 +685,13 @@ export default function App() {
           const uName = (user.name || "").trim().toLowerCase();
           const uMatr = (user.matricula || "").trim();
           const rMatr = (r.matricula || "").trim();
-          return rFiscal === uName || (uMatr && rMatr && uMatr === rMatr);
+          const matchFiscal = rFiscal === uName || (uMatr && rMatr && uMatr === rMatr);
+          // Filtrar por gerência (admin_geral vê tudo)
+          const matchGerencia = !user.gerencia || user.gerencia === "admin_geral" || (r.gerencia || "obras") === user.gerencia;
+          return matchFiscal && matchGerencia;
         })
+      : user?.gerencia && user.gerencia !== "admin_geral"
+      ? records.filter((r) => (r.gerencia || "obras") === user.gerencia)
       : records;
 
   if (user?.role === "fiscal") {
