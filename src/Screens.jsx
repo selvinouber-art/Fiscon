@@ -7973,28 +7973,31 @@ function NovaReclamacaoScreen({ onBack, onSalvar, usuarios = [] }) {
           {/* Foto */}
           <div className="form-section">
             <div className="form-section-title">Foto (opcional)</div>
-            <div
-              className="photo-slot"
-              style={{ aspectRatio: "16/9" }}
-              onClick={() => f("foto", !form.foto)}
-            >
-              {form.foto ? (
-                <>
-                  <span style={{ fontSize: 36 }}></span>
-                  <div style={{ fontSize: 11, color: T.success, marginTop: 6 }}>
-                    {" "}
-                    Foto anexada — toque para remover
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Icon name="camera" size={28} color={T.muted} />
-                  <span style={{ fontSize: 12, marginTop: 6 }}>
-                    Toque para anexar foto da irregularidade
-                  </span>
-                </>
-              )}
-            </div>
+            {form.fotoPreview ? (
+              <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: `2px solid ${T.border}` }}>
+                <img src={form.fotoPreview} alt="Foto anexada" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
+                <button onClick={() => { if(form.fotoPreview) URL.revokeObjectURL(form.fotoPreview); f("fotoFile", null); f("fotoPreview", null); f("foto", false); }}
+                  style={{ position: "absolute", top: 8, right: 8, background: T.danger, border: "none", borderRadius: "50%", width: 28, height: 28, color: "#fff", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <label className="photo-slot" style={{ aspectRatio: "16/9", cursor: "pointer" }}>
+                <input type="file" accept="image/*" style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const preview = URL.createObjectURL(file);
+                    f("fotoFile", file);
+                    f("fotoPreview", preview);
+                    f("foto", true);
+                  }} />
+                <Icon name="camera" size={28} color={T.muted} />
+                <span style={{ fontSize: 12, marginTop: 6 }}>
+                  Toque para anexar foto da irregularidade
+                </span>
+              </label>
+            )}
           </div>
 
           {/* Resumo antes de salvar */}
