@@ -7,6 +7,7 @@ import { T, css, Icon, maskMatricula, calcPrazo, SUPA_URL, SUPA_KEY, PORTAL_URL,
 import { DocPreview, imprimirTermica, gerarPDFA4 } from "./Impressao";
 import { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, RelatoriosScreen, NovaReclamacaoScreen } from "./Screens";
 import { saveSession, loadSession, touchSession, clearSession, checkSessionExpired } from "./auth.js";
+import { GerenciaHeader, GerenciaBadge, filtrarPorGerencia, GERENCIAS } from "./Posturas.jsx";
 
 // --- App ----------------------------------------------------------------------
 export default function App() {
@@ -330,6 +331,7 @@ export default function App() {
           endereco: result.endereco,
           bairros: result.bairros || [],
           ativo: result.ativo,
+          gerencia: result.gerencia || "obras",
         };
         setUser(found);
         saveSession(found);
@@ -366,8 +368,10 @@ export default function App() {
 
   // -- handlePreview ----------------------------------------------------------
   const handlePreview = (type, data) => {
-    const prefix = type === "auto" ? "AI" : "NP";
-    const existing = records.filter((r) => r.type === type).length;
+    // Prefixo por gerência: NP-OB, NP-PO, AI-OB, AI-PO
+    const gerSigla = user?.gerencia === "posturas" ? "PO" : "OB";
+    const prefix = type === "auto" ? `AI-${gerSigla}` : `NP-${gerSigla}`;
+    const existing = records.filter((r) => r.type === type && (r.gerencia || "obras") === (user?.gerencia || "obras")).length;
     const seq = String(existing + 1).padStart(4, "0");
     const num = `${prefix}-${seq}/${new Date().getFullYear()}`;
     // Gera o código de acesso já no preview — aparece no QR Code e no doc
@@ -439,6 +443,7 @@ export default function App() {
       testemunha1: data.testemunha1 || "",
       testemunha2: data.testemunha2 || "",
       obs_recusa: data.obsRecusa || "",
+      gerencia: user?.gerencia || "obras",
     };
     const saved = await supa.insert("records", newRecord);
     if (saved) {
@@ -1210,9 +1215,20 @@ export default function App() {
                   color: "rgba(255,255,255,0.75)",
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  justifyContent: "flex-end",
                 }}
               >
                 {roleLabel[user?.role] || user?.role}
+                <span style={{
+                  padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 800,
+                  background: user?.gerencia === "posturas" ? "rgba(22,101,52,0.3)" : user?.gerencia === "admin_geral" ? "rgba(180,83,9,0.3)" : "rgba(26,86,219,0.3)",
+                  color: "#fff", letterSpacing: 1,
+                }}>
+                  {user?.gerencia === "admin_geral" ? "GERAL" : user?.gerencia === "posturas" ? "PO" : "OB"}
+                </span>
               </div>
             </div>
             <button
@@ -1265,6 +1281,9 @@ export default function App() {
           className="desktop-content scroll-content"
           style={{ overflowY: "auto", height: "calc(100vh - 56px)" }}
         >
+          {/* Barra indicadora de gerência */}
+          <GerenciaHeader user={user} />
+          
           {/* Alerta de cancelamento pendente para fiscal */}
           {user?.role === "fiscal" &&
             cancelPending.filter((s) => s.recordFiscal === user.name).length >
