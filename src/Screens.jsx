@@ -5,6 +5,7 @@ import React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { T, Icon, calcPrazo, INFRACOES_Q61, INFRACOES_Q62, maskCPF, maskTelefone, maskMatricula, SUPA_URL, PORTAL_URL, supa, BRASAO_DATA } from "./config.jsx";
 import { SigCanvas, gerarPDF, printDoc, imprimirTermica, gerarPDFA4, DocPreview, imprimirDefesaA4 } from "./Impressao";
+import { GerenciaBadge, filtrarPorGerencia, GERENCIAS } from "./Posturas.jsx";
 
 function Dashboard({ user, records = [], onNav }) {
   const isAdmin = user?.role === "admin";
@@ -3818,6 +3819,7 @@ function UserFormModal({ user, onSave, onCancel }) {
     ativo: user?.ativo !== undefined ? user.ativo : true,
     senha: "",
     senhaConfirm: "",
+    gerencia: user?.gerencia || "obras",
   });
   const [errors, setErrors] = useState({});
   const f = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -3951,6 +3953,40 @@ function UserFormModal({ user, onSave, onCancel }) {
                 {v}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Gerência */}
+        <div className="form-section">
+          <div className="form-section-title">Gerência</div>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}
+          >
+            {[
+              { id: "admin_geral", label: "Admin Geral", emoji: "🏛️", color: "#B45309" },
+              { id: "obras", label: "Obras", emoji: "🏗️", color: "#1A56DB" },
+              { id: "posturas", label: "Posturas", emoji: "🏪", color: "#166534" },
+            ].map((g) => (
+              <button
+                key={g.id}
+                onClick={() => f("gerencia", g.id)}
+                style={{
+                  background: form.gerencia === g.id ? `${g.color}18` : T.surface,
+                  border: `1.5px solid ${form.gerencia === g.id ? g.color : T.border}`,
+                  borderRadius: 10, padding: "10px 8px", cursor: "pointer",
+                  color: form.gerencia === g.id ? g.color : T.muted,
+                  fontSize: 11, fontWeight: 700, textAlign: "center", transition: "all 0.2s",
+                }}
+              >
+                <div style={{ fontSize: 18, marginBottom: 4 }}>{g.emoji}</div>
+                {g.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>
+            {form.gerencia === "admin_geral" && "Acesso total a todas as gerências."}
+            {form.gerencia === "obras" && "Acesso apenas à Fiscalização de Obras."}
+            {form.gerencia === "posturas" && "Acesso apenas à Fiscalização de Posturas."}
           </div>
         </div>
 
