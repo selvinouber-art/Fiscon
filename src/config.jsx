@@ -1129,6 +1129,7 @@ const ADMIN_MASTER = {
   bairros: [],
   ativo: true,
   isMaster: true,
+  gerencia: "admin_geral",
 };
 
 export { T, css, INFRACOES_Q61, INFRACOES_Q62, maskMatricula, maskCPF, maskTelefone, Icon, calcPrazo, compressImage, SUPA_URL, SUPA_KEY, PORTAL_URL, supa, ADMIN_MASTER, BRASAO_DATA, RECORDS, RECLAMACOES_INIT };
