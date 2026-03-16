@@ -165,6 +165,9 @@ export default function App() {
     _notifNum: r.notif_num,
     codigoAcesso: r.codigo_acesso || "",
     fotoUrls: r.foto_urls || [],
+    testemunha1: r.testemunha1 || "",
+    testemunha2: r.testemunha2 || "",
+    obsRecusa: r.obs_recusa || "",
   });
 
   const mapReclamacao = (r) => ({
@@ -433,6 +436,9 @@ export default function App() {
       notif_num: data._notifNum || "",
       codigo_acesso: codigoAcesso,
       foto_urls: fotoUrls,
+      testemunha1: data.testemunha1 || "",
+      testemunha2: data.testemunha2 || "",
+      obs_recusa: data.obsRecusa || "",
     };
     const saved = await supa.insert("records", newRecord);
     if (saved) {
