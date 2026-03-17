@@ -6,7 +6,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { T, Icon, calcPrazo, INFRACOES_Q61, INFRACOES_Q62, maskCPF, maskTelefone, maskMatricula, SUPA_URL, PORTAL_URL, supa, BRASAO_DATA } from "./config.jsx";
 import { SigCanvas, gerarPDF, printDoc, imprimirTermica, gerarPDFA4, DocPreview, imprimirDefesaA4 } from "./Impressao";
 import { GERENCIAS, filtrarPorGerencia } from "./gerencia.js";
-import { GerenciaBadge, GerenciaSelector } from "./Posturas.jsx";
+import { GerenciaBadge, GerenciaSelector, FuncaoSelector } from "./Posturas.jsx";
 
 function Dashboard({ user, records = [], onNav }) {
   const isAdmin = user?.role === "admin";
@@ -3925,40 +3925,11 @@ function UserFormModal({ user, onSave, onCancel }) {
           </div>
         </div>
 
-        {/* Perfil de acesso */}
-        <div className="form-section">
-          <div className="form-section-title">Perfil de Acesso</div>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
-          >
-            {Object.entries(roleLabel).map(([k, v]) => (
-              <button
-                key={k}
-                onClick={() => f("role", k)}
-                style={{
-                  background:
-                    form.role === k ? `${roleColors[k]}18` : T.surface,
-                  border: `1.5px solid ${
-                    form.role === k ? roleColors[k] : T.border
-                  }`,
-                  borderRadius: 10,
-                  padding: "10px 8px",
-                  cursor: "pointer",
-                  color: form.role === k ? roleColors[k] : T.muted,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  textAlign: "center",
-                  transition: "all 0.2s",
-                }}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* 1. GERÊNCIA — escolher primeiro */}
+        <GerenciaSelector value={form.gerencia} onChange={(v) => { f("gerencia", v); f("role", "fiscal"); }} />
 
-        {/* Gerência */}
-        <GerenciaSelector value={form.gerencia} onChange={(v) => f("gerencia", v)} />
+        {/* 2. FUNÇÃO — muda conforme a gerência escolhida */}
+        <FuncaoSelector gerencia={form.gerencia} value={form.role} onChange={(v) => f("role", v)} />
 
         {/* Dados + Acesso unificados */}
         <div className="form-section">
