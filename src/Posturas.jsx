@@ -1,3 +1,4 @@
+import React from "react";
 // ═══════════════════════════════════════════════════
 //  FISCON — Módulo de Posturas (Posturas.jsx)
 //  
