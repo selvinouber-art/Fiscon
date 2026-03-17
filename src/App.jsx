@@ -298,7 +298,7 @@ export default function App() {
       setUser({ ...ADMIN_MASTER });
       saveSession({ ...ADMIN_MASTER });
       setScreen("main");
-      setTab("home");
+      setTab("admin");
       addLog(
         "Login",
         "Administrador Master — acesso de emergência",
