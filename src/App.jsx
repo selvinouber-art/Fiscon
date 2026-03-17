@@ -7,7 +7,8 @@ import { T, css, Icon, maskMatricula, calcPrazo, SUPA_URL, SUPA_KEY, PORTAL_URL,
 import { DocPreview, imprimirTermica, gerarPDFA4 } from "./Impressao";
 import { Dashboard, FormScreen, PrazosScreen, RegistrosScreen, HistoryScreen, PerfilModal, RelatorioAvancado, AdministracaoScreen, AdminScreen, ReclamacoesScreen, LogScreen, DefesasScreen, ConfigScreen, AuditoriaScreen, RelatoriosScreen, NovaReclamacaoScreen } from "./Screens";
 import { saveSession, loadSession, touchSession, clearSession, checkSessionExpired } from "./auth.js";
-import { GerenciaHeader, GerenciaBadge, filtrarPorGerencia, GERENCIAS } from "./Posturas.jsx";
+import { gerarNumDocumento, gerarCodigoAcesso, filtrarPorGerencia, GERENCIAS, getGerenciaConfig } from "./gerencia.js";
+import { GerenciaHeader, GerenciaBadge } from "./Posturas.jsx";
 
 // --- App ----------------------------------------------------------------------
 export default function App() {
@@ -369,17 +370,9 @@ export default function App() {
 
   // -- handlePreview ----------------------------------------------------------
   const handlePreview = (type, data) => {
-    // Prefixo por gerência: NP-OB, NP-PO, AI-OB, AI-PO
-    const gerSigla = user?.gerencia === "posturas" ? "PO" : "OB";
-    const prefix = type === "auto" ? `AI-${gerSigla}` : `NP-${gerSigla}`;
-    const existing = records.filter((r) => r.type === type && (r.gerencia || "obras") === (user?.gerencia || "obras")).length;
-    const seq = String(existing + 1).padStart(4, "0");
-    const num = `${prefix}-${seq}/${new Date().getFullYear()}`;
-    // Gera o código de acesso já no preview — aparece no QR Code e no doc
-    const codigoPreview =
-      num.replace(/[^A-Z0-9]/g, "") +
-      "-" +
-      Math.random().toString(36).slice(2, 6).toUpperCase();
+    const userGerencia = user?.gerencia || "obras";
+    const num = gerarNumDocumento(type, userGerencia, records);
+    const codigoPreview = gerarCodigoAcesso();
     setPreview({
       type,
       data: {
@@ -389,6 +382,7 @@ export default function App() {
         matricula: data.matricula || user?.matricula,
         codigoAcesso: codigoPreview,
         photos: data.photos || [],
+        gerencia: userGerencia,
       },
     });
   };
@@ -444,7 +438,7 @@ export default function App() {
       testemunha1: data.testemunha1 || "",
       testemunha2: data.testemunha2 || "",
       obs_recusa: data.obsRecusa || "",
-      gerencia: user?.gerencia || "obras",
+      gerencia: data.gerencia || user?.gerencia || "obras",
     };
     const saved = await supa.insert("records", newRecord);
     if (saved) {
@@ -551,7 +545,6 @@ export default function App() {
           p_endereco: updated.endereco || "",
           p_bairros: updated.bairros || [],
           p_ativo: updated.ativo !== false,
-          p_gerencia: updated.gerencia || "obras",
         }),
       });
     }
@@ -678,21 +671,18 @@ export default function App() {
     ]);
   }
 
+  // Filtrar por gerência primeiro, depois por fiscal
+  const recordsPorGerencia = filtrarPorGerencia(records, user);
   const recordsFiltrados =
     user?.role === "fiscal"
-      ? records.filter((r) => {
+      ? recordsPorGerencia.filter((r) => {
           const rFiscal = (r.fiscal || "").trim().toLowerCase();
           const uName = (user.name || "").trim().toLowerCase();
           const uMatr = (user.matricula || "").trim();
           const rMatr = (r.matricula || "").trim();
-          const matchFiscal = rFiscal === uName || (uMatr && rMatr && uMatr === rMatr);
-          // Filtrar por gerência (admin_geral vê tudo)
-          const matchGerencia = !user.gerencia || user.gerencia === "admin_geral" || (r.gerencia || "obras") === user.gerencia;
-          return matchFiscal && matchGerencia;
+          return rFiscal === uName || (uMatr && rMatr && uMatr === rMatr);
         })
-      : user?.gerencia && user.gerencia !== "admin_geral"
-      ? records.filter((r) => (r.gerencia || "obras") === user.gerencia)
-      : records;
+      : recordsPorGerencia;
 
   if (user?.role === "fiscal") {
     console.log(
@@ -1225,10 +1215,7 @@ export default function App() {
                   color: "rgba(255,255,255,0.75)",
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  justifyContent: "flex-end",
+                  display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end",
                 }}
               >
                 {roleLabel[user?.role] || user?.role}
@@ -1293,7 +1280,7 @@ export default function App() {
         >
           {/* Barra indicadora de gerência */}
           <GerenciaHeader user={user} />
-          
+
           {/* Alerta de cancelamento pendente para fiscal */}
           {user?.role === "fiscal" &&
             cancelPending.filter((s) => s.recordFiscal === user.name).length >
