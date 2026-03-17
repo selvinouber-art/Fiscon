@@ -218,3 +218,77 @@ export function GerenciaFilter({ value, onChange }) {
     </div>
   );
 }
+
+// ─── Seletor de Função (carrega do banco por gerência) ─────
+export function FuncaoSelector({ gerencia, value, onChange }) {
+  const [funcoes, setFuncoes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const ger = gerencia === "admin_geral" ? "" : gerencia || "obras";
+      const filtro = ger ? `&gerencia=eq.${ger}` : "";
+      const data = await supa.get("funcoes_gerencia", `&order=ordem.asc${filtro}`);
+      setFuncoes(data || []);
+      setLoading(false);
+    };
+    load();
+  }, [gerencia]);
+
+  // Fallback hardcoded caso tabela esteja vazia
+  const fallback = [
+    { codigo: "fiscal", nome: "Fiscal", cor: "#1A56DB" },
+    { codigo: "atendente", nome: "Balcão", cor: "#166534" },
+    { codigo: "admin", nome: "Gerência", cor: "#B91C1C" },
+  ];
+
+  const lista = funcoes.length > 0
+    ? funcoes.filter((f) => f.ativo !== false)
+    : fallback;
+
+  if (gerencia === "admin_geral") {
+    return (
+      <div className="form-section">
+        <div className="form-section-title">Função</div>
+        <div style={{ padding: 14, background: "#FEF3C7", borderRadius: 10, border: "1px solid #F59E0B", fontSize: 12, color: "#92400E" }}>
+          Admin Geral tem acesso total. A função será definida como <strong>admin</strong>.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="form-section">
+      <div className="form-section-title">Função {gerencia === "posturas" ? "(Posturas)" : "(Obras)"}</div>
+      {loading ? (
+        <div style={{ padding: 12, color: T.muted, fontSize: 12 }}>Carregando funções...</div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: lista.length > 2 ? "1fr 1fr" : "1fr 1fr", gap: 8 }}>
+          {lista.map((fn) => {
+            const codigo = fn.codigo;
+            const cor = fn.cor || T.accent;
+            const ativo = value === codigo;
+            return (
+              <button
+                key={fn.id || codigo}
+                onClick={() => onChange(codigo)}
+                style={{
+                  background: ativo ? `${cor}18` : T.surface,
+                  border: `1.5px solid ${ativo ? cor : T.border}`,
+                  borderRadius: 10, padding: "12px 8px", cursor: "pointer",
+                  color: ativo ? cor : T.muted,
+                  fontSize: 12, fontWeight: 700, textAlign: "center",
+                  transition: "all 0.2s",
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 800 }}>{fn.nome}</div>
+                {fn.descricao && <div style={{ fontSize: 9, marginTop: 4, opacity: 0.7, fontWeight: 400 }}>{fn.descricao}</div>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
